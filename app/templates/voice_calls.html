@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Voice Calls Queue - Uzhavan AI{% endblock %}
+{% block page_title %}Active Voice Calls Queue & Telephony Dispatcher{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h3 style="font-size: 16px; font-weight: 700;">Outbound Call Queue (Prioritized Execution)</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+        Prioritization Hierarchy: <span style="color:#ef4444; font-weight: 600;">CRITICAL</span> &gt; <span style="color:#f59e0b; font-weight: 600;">HIGH</span> &gt; <span style="color:#38bdf8; font-weight: 600;">NORMAL</span> &gt; <span style="color:#94a3b8; font-weight: 600;">LOW</span>.
+        Worker Concurrency Limit: <strong>{{ concurrency_limit }} concurrent channels</strong>.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button type="button" onclick="dispatchQueueNow()" class="btn btn-primary" id="dispatchBtn">
+        ⚡ Dispatch Call Queue Now
+      </button>
+      <a href="/voice-calls" class="btn btn-secondary">🔄 Refresh Queue</a>
+    </div>
+  </div>
+</div>
+
+<!-- Queue Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container" style="border: none;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Job ID</th>
+          <th>Destination Number</th>
+          <th>Language</th>
+          <th>Event Identifier</th>
+          <th>Status</th>
+          <th>Attempts</th>
+          <th>Scheduled Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if jobs %}
+          {% for j in jobs %}
+          <tr>
+            <td>
+              <span class="badge {% if j.priority == 'CRITICAL' %}badge-danger{% elif j.priority == 'HIGH' %}badge-warning{% elif j.priority == 'NORMAL' %}badge-info{% else %}badge-muted{% endif %}">
+                {{ j.priority }}
+              </span>
+            </td>
+            <td style="font-family: monospace; font-weight: 600; color: var(--emerald-400);">{{ j.job_id }}</td>
+            <td style="font-family: monospace;">{{ j.phone_number }}</td>
+            <td>{{ j.language }}</td>
+            <td style="font-family: monospace; font-size: 12px; color: var(--text-secondary);">{{ j.event_id }}</td>
+            <td>
+              <span class="badge {% if j.status == 'QUEUED' %}badge-info{% elif j.status == 'IN_PROGRESS' %}badge-warning{% elif j.status == 'COMPLETED' %}badge-success{% else %}badge-danger{% endif %}">
+                {{ j.status }}
+              </span>
+            </td>
+            <td>{{ j.attempts }} / {{ j.max_retries }}</td>
+            <td style="font-size: 12px; color: var(--text-muted);">
+              {{ j.scheduled_for.strftime('%Y-%m-%d %H:%M:%S') if j.scheduled_for else 'Immediate' }}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              Queue is currently empty. Outbound calls will be generated autonomously when alerts match registered farmers.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function dispatchQueueNow() {
+  const btn = document.getElementById('dispatchBtn');
+  btn.disabled = true;
+  btn.innerText = "Dispatching...";
+
+  try {
+    const res = await fetch('/api/calls/dispatch-queue', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`✅ ${data.message}`);
+      window.location.reload();
+    } else {
+      alert("Error dispatching queue");
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "⚡ Dispatch Call Queue Now";
+  }
+}
+</script>
+{% endblock %}

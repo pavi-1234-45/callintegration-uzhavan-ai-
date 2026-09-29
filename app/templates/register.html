@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Register Farmer - Field Survey Portal{% endblock %}
+{% block page_title %}Farmer Field Survey & Registration{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+  
+  <!-- Success Confirmation Banner / Card (Initially Hidden, shown dynamically on submission) -->
+  <div id="confirmation-container" style="display: none; margin-bottom: 30px;">
+    <div class="confirmation-card">
+      <div class="confirmation-header">
+        <div class="confirmation-icon">✓</div>
+        <div>
+          <h3 style="font-size: 20px; font-weight: 700; color: #ffffff;">Farmer Registered Successfully</h3>
+          <p style="font-size: 13px; color: var(--emerald-400); margin-top: 2px;">
+            Farmer is recorded in Uzhavan AI database and will receive personalized updates.
+          </p>
+        </div>
+      </div>
+
+      <div class="confirm-details">
+        <div class="confirm-item">
+          <span class="confirm-label">Farmer ID</span>
+          <span class="confirm-val" id="conf-id">-</span>
+        </div>
+        <div class="confirm-item">
+          <span class="confirm-label">Farmer Name</span>
+          <span class="confirm-val" id="conf-name">-</span>
+        </div>
+        <div class="confirm-item">
+          <span class="confirm-label">Phone Number</span>
+          <span class="confirm-val" id="conf-phone">-</span>
+        </div>
+        <div class="confirm-item">
+          <span class="confirm-label">Location</span>
+          <span class="confirm-val" id="conf-location">-</span>
+        </div>
+        <div class="confirm-item">
+          <span class="confirm-label">Registered Crop</span>
+          <span class="confirm-val" id="conf-crop">-</span>
+        </div>
+        <div class="confirm-item">
+          <span class="confirm-label">Preferred Language</span>
+          <span class="confirm-val" id="conf-language">-</span>
+        </div>
+        <div class="confirm-item" style="grid-column: span 2;">
+          <span class="confirm-label">Automated Voice Alerts</span>
+          <span class="confirm-val" id="conf-voice" style="color: var(--emerald-400);">-</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 14px; justify-content: flex-end;">
+        <button type="button" onclick="resetSurveyForm()" class="btn btn-primary">
+          + Register Another Farmer
+        </button>
+        <a href="/farmers" class="btn btn-secondary">
+          View in Farmers Directory →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Survey Form -->
+  <div class="card" id="survey-card">
+    <div style="margin-bottom: 24px;">
+      <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Field Worker Survey Questionnaire</h3>
+      <p style="font-size: 13px; color: var(--text-secondary);">
+        Please collect farmer profile details accurately. Farmers only require a standard phone capable of receiving voice calls.
+      </p>
+    </div>
+
+    <form id="farmerSurveyForm" onsubmit="handleFarmerSubmit(event)">
+      <!-- Section 1 – Personal Details -->
+      <div class="form-section">
+        <div class="section-title">
+          <span>1.</span>
+          <span>Personal Details</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Farmer Full Name <span class="req">*</span></label>
+            <input type="text" id="name" required placeholder="e.g. Kumar S." class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number <span class="req">*</span></label>
+            <input type="tel" id="phone" required placeholder="e.g. 9876543210 or +919876543210" class="form-control">
+            <span style="font-size: 11px; color: var(--text-muted);">Standard 10-digit Indian mobile number</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preferred Voice Language <span class="req">*</span></label>
+            <select id="preferred_language" required class="form-control form-select">
+              <option value="ta-IN" selected>Tamil (தமிழ்) - ta-IN</option>
+              <option value="en-IN">English - en-IN</option>
+              <option value="te-IN">Telugu (తెలుగు) - te-IN</option>
+              <option value="kn-IN">Kannada (ಕನ್ನಡ) - kn-IN</option>
+              <option value="ml-IN">Malayalam (മലയാളം) - ml-IN</option>
+              <option value="hi-IN">Hindi (हिन्दी) - hi-IN</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Farmer Category</label>
+            <select id="farmer_category" class="form-control form-select">
+              <option value="Small" selected>Small Farmer (1 - 2 Hectares)</option>
+              <option value="Marginal">Marginal Farmer (&lt; 1 Hectare)</option>
+              <option value="Medium">Medium Farmer (2 - 10 Hectares)</option>
+              <option value="Large">Large Farmer (&gt; 10 Hectares)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2 – Location Details -->
+      <div class="form-section">
+        <div class="section-title">
+          <span>2.</span>
+          <span>Location & GPS Details</span>
+        </div>
+
+        <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <p style="font-size: 12.5px; color: var(--text-secondary);">
+            Use real farmer coordinates for accurate meteorological forecasts.
+          </p>
+          <button type="button" onclick="detectDeviceLocation()" class="btn btn-secondary" style="font-size: 12.5px; padding: 6px 14px;">
+            <span>📍</span>
+            <span>Use Browser / Device GPS Location</span>
+          </button>
+        </div>
+        <div id="geo-status" style="font-size: 12px; margin-bottom: 12px;"></div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">State <span class="req">*</span></label>
+            <input type="text" id="state" required value="Tamil Nadu" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">District <span class="req">*</span></label>
+            <input type="text" id="district" required placeholder="e.g. Madurai" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Taluk</label>
+            <input type="text" id="taluk" placeholder="e.g. Melur" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Village / Gram Panchayat</label>
+            <input type="text" id="village" placeholder="e.g. Kottampatti" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">GPS Latitude <span class="req">*</span></label>
+            <input type="number" step="0.000001" id="latitude" required value="9.925200" placeholder="9.9252" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">GPS Longitude <span class="req">*</span></label>
+            <input type="number" step="0.000001" id="longitude" required value="78.119800" placeholder="78.1198" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3 – Crop Details -->
+      <div class="form-section">
+        <div class="section-title">
+          <span>3.</span>
+          <span>Crop Details</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Main Crop <span class="req">*</span></label>
+            <input type="text" id="main_crop" required placeholder="e.g. Tomato or Paddy" class="form-control">
+            <span style="font-size: 11px; color: var(--text-muted);">Used for crop-specific mandi prices and pest alerts</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Additional Crops (if any)</label>
+            <input type="text" id="additional_crops" placeholder="e.g. Onion, Chilli, Brinjal" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Crop Season</label>
+            <select id="crop_season" class="form-control form-select">
+              <option value="Kharif">Kharif (Monsoon)</option>
+              <option value="Rabi" selected>Rabi (Winter / Spring)</option>
+              <option value="Zaid">Zaid (Summer)</option>
+              <option value="Annual">Annual / Perennial</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4 – Voice Consent -->
+      <div class="form-section">
+        <div class="section-title">
+          <span>4.</span>
+          <span>Voice Call Consent & Settings</span>
+        </div>
+
+        <label class="checkbox-card">
+          <input type="checkbox" id="consent_given" required>
+          <div class="checkbox-text">
+            <strong>Farmer has given explicit consent to receive automated agricultural voice calls *</strong><br>
+            <span style="font-size: 12px; color: var(--text-secondary);">
+              The farmer agrees to receive critical weather advisories, daily crop mandi prices, and government scheme updates on their registered telephone.
+            </span>
+          </div>
+        </label>
+
+        <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px;">
+          <label class="form-label" style="margin-bottom: 0;">Automated Voice Alerts:</label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="voice_toggle" value="ON" checked> <span style="font-size: 13px;">ON</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="voice_toggle" value="OFF"> <span style="font-size: 13px;">OFF</span>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; display: flex; justify-content: flex-end; gap: 16px;">
+        <button type="reset" class="btn btn-secondary">Reset Form</button>
+        <button type="submit" id="submitBtn" class="btn btn-primary" style="padding: 12px 28px;">
+          <span>💾</span>
+          <span>Save & Register Farmer</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function handleFarmerSubmit(event) {
+  event.preventDefault();
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Registering...";
+
+  const payload = {
+    name: document.getElementById('name').value,
+    phone: document.getElementById('phone').value,
+    preferred_language: document.getElementById('preferred_language').value,
+    farmer_category: document.getElementById('farmer_category').value,
+    state: document.getElementById('state').value,
+    district: document.getElementById('district').value,
+    taluk: document.getElementById('taluk').value || null,
+    village: document.getElementById('village').value || null,
+    latitude: parseFloat(document.getElementById('latitude').value),
+    longitude: parseFloat(document.getElementById('longitude').value),
+    main_crop: document.getElementById('main_crop').value,
+    additional_crops: document.getElementById('additional_crops').value || "",
+    crop_season: document.getElementById('crop_season').value,
+    consent_given: document.getElementById('consent_given').checked,
+    voice_alerts_enabled: document.querySelector('input[name="voice_toggle"]:checked').value === "ON"
+  };
+
+  try {
+    const res = await fetch('/api/farmers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      // Display Confirmation Card
+      document.getElementById('conf-id').innerText = data.farmer_id;
+      document.getElementById('conf-name').innerText = data.name;
+      document.getElementById('conf-phone').innerText = data.masked_phone;
+      document.getElementById('conf-location').innerText = data.location;
+      document.getElementById('conf-crop').innerText = data.crop;
+      document.getElementById('conf-language').innerText = data.language;
+      document.getElementById('conf-voice').innerText = data.voice_alerts;
+
+      document.getElementById('confirmation-container').style.display = 'block';
+      document.getElementById('survey-card').style.display = 'none';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      alert("Registration Error: " + (data.detail || "Could not register farmer. Please check phone number and fields."));
+    }
+  } catch (err) {
+    alert("Network error occurred while saving farmer: " + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = "<span>💾</span><span>Save & Register Farmer</span>";
+  }
+}
+
+function resetSurveyForm() {
+  document.getElementById('farmerSurveyForm').reset();
+  document.getElementById('confirmation-container').style.display = 'none';
+  document.getElementById('survey-card').style.display = 'block';
+  document.getElementById('geo-status').innerHTML = '';
+}
+</script>
+{% endblock %}

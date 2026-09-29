@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Uzhavan AI - Autonomous Multilingual Voice Communication System{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/portal.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">🌾</div>
+        <div class="brand-text">
+          <h1>Uzhavan AI</h1>
+          <span>உழவன் AI • Voice Portal</span>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+            <span class="nav-icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/register" class="nav-link {% if active_page == 'register' %}active{% endif %}">
+            <span class="nav-icon">📝</span>
+            <span>Register Farmer</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/farmers" class="nav-link {% if active_page == 'farmers' %}active{% endif %}">
+            <span class="nav-icon">👨‍🌾</span>
+            <span>Farmers</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/weather-alerts" class="nav-link {% if active_page == 'weather' %}active{% endif %}">
+            <span class="nav-icon">⛈️</span>
+            <span>Weather Alerts</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/market-updates" class="nav-link {% if active_page == 'market' %}active{% endif %}">
+            <span class="nav-icon">📈</span>
+            <span>Market Updates</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/schemes" class="nav-link {% if active_page == 'schemes' %}active{% endif %}">
+            <span class="nav-icon">🏛️</span>
+            <span>Government Schemes</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/news" class="nav-link {% if active_page == 'news' %}active{% endif %}">
+            <span class="nav-icon">📰</span>
+            <span>Agricultural News</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/voice-calls" class="nav-link {% if active_page == 'calls' %}active{% endif %}">
+            <span class="nav-icon">📞</span>
+            <span>Voice Calls</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/call-history" class="nav-link {% if active_page == 'history' %}active{% endif %}">
+            <span class="nav-icon">📜</span>
+            <span>Call History</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}">
+            <span class="nav-icon">⚙️</span>
+            <span>Settings</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="system-status-widget">
+        <div class="status-indicator">
+          <div class="pulse-dot"></div>
+          <span>Autonomous Monitor Active</span>
+        </div>
+        <div style="color: var(--text-muted); margin-top: 4px;">
+          TTS: 6 Languages Online<br>
+          Carrier: {{ telephony_provider|upper }}
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="page-title">
+          <h2>{% block page_title %}Dashboard{% endblock %}</h2>
+        </div>
+        <div class="topbar-actions">
+          <a href="/register" class="btn btn-primary">
+            <span>+</span>
+            <span>New Farmer Survey</span>
+          </a>
+        </div>
+      </header>
+
+      <main class="content-body">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <script src="/static/js/portal.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

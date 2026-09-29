@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Farmers Directory - Uzhavan AI{% endblock %}
+{% block page_title %}Registered Farmers Management{% endblock %}
+
+{% block content %}
+<!-- Search and Filter Controls -->
+<div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+  <form method="GET" action="/farmers" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+    <div class="form-group" style="flex: 1; min-width: 220px;">
+      <label class="form-label">Search Farmers</label>
+      <input type="text" name="search" value="{{ search or '' }}" placeholder="Search by Name, Farmer ID, or Phone..." class="form-control">
+    </div>
+    <div class="form-group" style="width: 170px;">
+      <label class="form-label">District</label>
+      <input type="text" name="district" value="{{ district or '' }}" placeholder="e.g. Madurai" class="form-control">
+    </div>
+    <div class="form-group" style="width: 160px;">
+      <label class="form-label">Crop</label>
+      <input type="text" name="crop" value="{{ crop or '' }}" placeholder="e.g. Tomato" class="form-control">
+    </div>
+    <div class="form-group" style="width: 150px;">
+      <label class="form-label">Language</label>
+      <select name="language" class="form-control form-select">
+        <option value="">All</option>
+        <option value="ta-IN" {% if language == 'ta-IN' %}selected{% endif %}>Tamil</option>
+        <option value="en-IN" {% if language == 'en-IN' %}selected{% endif %}>English</option>
+        <option value="te-IN" {% if language == 'te-IN' %}selected{% endif %}>Telugu</option>
+        <option value="kn-IN" {% if language == 'kn-IN' %}selected{% endif %}>Kannada</option>
+        <option value="ml-IN" {% if language == 'ml-IN' %}selected{% endif %}>Malayalam</option>
+        <option value="hi-IN" {% if language == 'hi-IN' %}selected{% endif %}>Hindi</option>
+      </select>
+    </div>
+    <div class="form-group" style="width: 150px;">
+      <label class="form-label">Voice Status</label>
+      <select name="voice_status" class="form-control form-select">
+        <option value="">All</option>
+        <option value="enabled" {% if voice_status == 'enabled' %}selected{% endif %}>Enabled</option>
+        <option value="disabled" {% if voice_status == 'disabled' %}selected{% endif %}>Disabled</option>
+      </select>
+    </div>
+    <div class="form-group" style="width: 150px;">
+      <label class="form-label">Source</label>
+      <select name="source" class="form-control form-select">
+        <option value="">All Sources</option>
+        <option value="mobile_app" {% if source == 'mobile_app' %}selected{% endif %}>📱 Mobile App</option>
+        <option value="survey_portal" {% if source == 'survey_portal' %}selected{% endif %}>📝 Survey Portal</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-secondary">Filter</button>
+    {% if search or district or crop or language or voice_status or source %}
+    <a href="/farmers" class="btn btn-secondary">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Farmers Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div style="padding: 16px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h3 style="font-size: 15px; font-weight: 600; margin: 0;">Registered Farmers List ({{ farmers|length }})</h3>
+      <span class="badge badge-info" style="font-size: 11px;">Firebase: uzhavan-ai-686d6</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button id="btn-sync-farmers" onclick="triggerFirebaseSyncFarmers()" class="btn btn-secondary" style="font-size: 12.5px; padding: 6px 14px; display: flex; align-items: center; gap: 6px;">
+        <span>⚡</span> Sync from Mobile App
+      </button>
+      <a href="/register" class="btn btn-primary" style="font-size: 12.5px; padding: 6px 14px;">+ Register Farmer</a>
+    </div>
+  </div>
+  <div id="farmers-sync-banner" style="display: none; margin: 12px 24px; padding: 10px 14px; border-radius: 6px; font-size: 12.5px;"></div>
+
+  <div class="table-container" style="border: none;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Farmer ID</th>
+          <th>Farmer Name</th>
+          <th>Masked Phone</th>
+          <th>District / Village</th>
+          <th>Crop</th>
+          <th>Language</th>
+          <th>Voice Status</th>
+          <th>Consent</th>
+          <th>Registered Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if farmers %}
+          {% for f in farmers %}
+          <tr>
+            <td style="font-family: monospace; font-weight: 600; color: var(--emerald-400);">
+              {{ f.farmer_id }}
+              {% if f.source == 'mobile_app' or f.farmer_id.startswith('UZH-APP') %}
+                <span class="badge badge-info" style="font-size: 10px; padding: 2px 6px; margin-left: 4px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">📱 Mobile App</span>
+              {% else %}
+                <span class="badge badge-muted" style="font-size: 10px; padding: 2px 6px; margin-left: 4px;">📝 Survey</span>
+              {% endif %}
+            </td>
+            <td style="font-weight: 600;">{{ f.name }}</td>
+            <td style="font-family: monospace;">{{ f.masked_phone }}</td>
+            <td>
+              {{ f.district }}{% if f.village %}, <span style="color: var(--text-muted);">{{ f.village }}</span>{% endif %}
+            </td>
+            <td>
+              <span class="badge badge-info">{{ f.main_crop }}</span>
+              {% if f.additional_crops %}
+              <span style="font-size: 11px; color: var(--text-muted); display: block;">+ {{ f.additional_crops }}</span>
+              {% endif %}
+            </td>
+            <td>{{ f.preferred_language }}</td>
+            <td>
+              {% if f.voice_alerts_enabled %}
+                <span class="badge badge-success">Enabled</span>
+              {% else %}
+                <span class="badge badge-muted">Disabled</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if f.consent_given %}
+                <span style="color: var(--emerald-400); font-size: 14px;">✓ Yes</span>
+              {% else %}
+                <span style="color: var(--accent-red); font-size: 14px;">✗ No</span>
+              {% endif %}
+            </td>
+            <td style="font-size: 12px; color: var(--text-muted);">
+              {{ f.created_at.strftime('%Y-%m-%d') if f.created_at else '-' }}
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" onclick="testCallFarmer({{ f.id }}, '{{ f.name }}')" class="btn btn-primary" style="font-size: 11.5px; padding: 4px 10px;" title="Trigger Test Call">
+                  📞 Call
+                </button>
+                <button type="button" onclick="toggleVoiceStatus({{ f.id }})" class="btn btn-secondary" style="font-size: 11.5px; padding: 4px 10px;">
+                  Toggle
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              No farmers found matching query. Click "Register Farmer" to conduct a survey and add one.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function toggleVoiceStatus(id) {
+  try {
+    const res = await fetch(`/api/farmers/${id}/toggle-voice`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      window.location.reload();
+    } else {
+      alert("Error: " + (data.detail || "Could not toggle status"));
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+}
+
+async function testCallFarmer(id, name) {
+  if (!confirm(`Trigger an automated test phone call to ${name}?`)) return;
+  try {
+    const res = await fetch(`/api/calls/test-call/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`✅ Outbound call dispatched to ${data.farmer_name} (${data.phone})!\nJob ID: ${data.job_id}\nCheck Call History for live carrier updates.`);
+      window.location.href = "/call-history";
+    } else {
+      alert("Call Error: " + (data.detail || "Failed to trigger call"));
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+}
+async function triggerFirebaseSyncFarmers() {
+  const btn = document.getElementById('btn-sync-farmers');
+  const banner = document.getElementById('farmers-sync-banner');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> Syncing...';
+  }
+  if (banner) banner.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/firebase/sync', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      if (banner) {
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(52, 211, 153, 0.15)';
+        banner.style.color = '#34d399';
+        banner.style.border = '1px solid rgba(52, 211, 153, 0.3)';
+        banner.textContent = `✅ Successfully synced ${data.total_synced} app farmers (${data.created} new, ${data.updated} updated). ${data.calls_queued} autonomous calls queued.`;
+      }
+      setTimeout(() => { location.reload(); }, 1800);
+    } else {
+      if (banner) {
+        banner.style.display = 'block';
+        banner.style.background = 'rgba(239, 68, 68, 0.15)';
+        banner.style.color = '#f87171';
+        banner.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+        banner.textContent = `❌ Sync failed: ${data.detail || data.error || 'Unknown error'}`;
+      }
+    }
+  } catch (err) {
+    if (banner) {
+      banner.style.display = 'block';
+      banner.style.background = 'rgba(239, 68, 68, 0.15)';
+      banner.style.color = '#f87171';
+      banner.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      banner.textContent = `❌ Network error triggering sync: ${err.message}`;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>⚡</span> Sync from Mobile App';
+    }
+  }
+}
+</script>
+{% endblock %}

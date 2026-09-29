@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Government Schemes - Uzhavan AI{% endblock %}
+{% block page_title %}Official Government Schemes & Welfare Verification Portal{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h3 style="font-size: 16px; font-weight: 700;">Verified Central & State Agricultural Schemes</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+        Only official schemes verified and published by authorized admin will trigger autonomous voice calls to eligible farmers.
+      </p>
+    </div>
+    <button type="button" onclick="openModal('addSchemeModal')" class="btn btn-primary" style="font-size: 12.5px;">
+      + Add Official Government Scheme
+    </button>
+  </div>
+</div>
+
+<!-- Schemes Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px;">
+  {% if schemes %}
+    {% for s in schemes %}
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <span class="badge {% if s.verification_status == 'PUBLISHED' %}badge-success{% elif s.verification_status == 'VERIFIED' %}badge-info{% else %}badge-warning{% endif %}">
+            {{ s.verification_status }}
+          </span>
+          <span style="font-size: 12px; color: var(--text-muted);">
+            Deadline: {{ s.deadline or 'Ongoing' }}
+          </span>
+        </div>
+
+        <h4 style="font-size: 17px; font-weight: 700; color: #ffffff; margin-bottom: 8px;">
+          {{ s.scheme_name }}
+        </h4>
+
+        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
+          {{ s.description }}
+        </p>
+
+        <div style="background: rgba(15, 23, 42, 0.7); border-radius: var(--radius-sm); padding: 14px; font-size: 12.5px; margin-bottom: 16px;">
+          <div style="margin-bottom: 6px;"><strong>Target Crops:</strong> <span style="color: var(--emerald-400)">{{ s.eligible_crop or 'All' }}</span></div>
+          <div style="margin-bottom: 6px;"><strong>Eligible Farmers:</strong> {{ s.farmer_category or 'All Categories' }}</div>
+          <div style="margin-bottom: 6px;"><strong>Jurisdiction:</strong> {{ s.state }} ({{ s.district or 'All Districts' }})</div>
+          <div><strong>Benefit:</strong> <span style="color: #fcd34d">{{ s.benefit }}</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px; margin-top: 8px;">
+        <a href="{{ s.official_url }}" target="_blank" style="font-size: 12px; color: #38bdf8; text-decoration: none;">
+          Official Portal ↗
+        </a>
+
+        {% if s.verification_status != 'PUBLISHED' %}
+        <button type="button" onclick="publishScheme({{ s.id }}, '{{ s.scheme_name }}')" class="btn btn-primary" style="font-size: 11.5px; padding: 6px 14px;">
+          ✓ Verify & Publish (Trigger Calls)
+        </button>
+        {% else %}
+        <span style="font-size: 12px; color: var(--emerald-400); display: flex; align-items: center; gap: 4px;">
+          <span>✓</span> Published & Matched
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+      No schemes registered.
+    </div>
+  {% endif %}
+</div>
+
+<!-- Add Scheme Modal -->
+<div class="modal-overlay" id="addSchemeModal">
+  <div class="modal-content" style="max-width: 650px;">
+    <div class="modal-header">
+      <h3 style="font-size: 17px; font-weight: 700;">Add Official Government Scheme</h3>
+      <button type="button" class="close-btn" onclick="closeModal('addSchemeModal')">&times;</button>
+    </div>
+    <form onsubmit="submitNewScheme(event)">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label">Scheme Name *</label>
+        <input type="text" id="scheme_name" required placeholder="e.g. PM-KISAN" class="form-control">
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label">Description *</label>
+        <textarea id="scheme_desc" required rows="2" class="form-control" placeholder="Official description"></textarea>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div class="form-group">
+          <label class="form-label">State</label>
+          <input type="text" id="scheme_state" value="Tamil Nadu" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">District (or All)</label>
+          <input type="text" id="scheme_district" value="All" class="form-control">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div class="form-group">
+          <label class="form-label">Eligible Crops (or All)</label>
+          <input type="text" id="scheme_crops" value="Tomato,Paddy,Cotton" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Farmer Category</label>
+          <input type="text" id="scheme_cats" value="Small,Marginal" class="form-control">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label">Benefit Details *</label>
+        <input type="text" id="scheme_benefit" required placeholder="e.g. ₹6,000 annual direct cash transfer" class="form-control">
+      </div>
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label">Official Portal URL *</label>
+        <input type="url" id="scheme_url" required value="https://agri.tn.gov.in" class="form-control">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addSchemeModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Scheme (Pending Verification)</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function publishScheme(id, name) {
+  if (!confirm(`Verify and publish '${name}'? This will immediately match eligible registered farmers and queue voice calls.`)) return;
+
+  try {
+    const res = await fetch(`/api/schemes/${id}/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'PUBLISH', verified_by: 'Field Director' })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`✅ Scheme Published!\n${data.message}`);
+      window.location.reload();
+    } else {
+      alert("Error: " + (data.detail || "Failed to publish"));
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+}
+
+async function submitNewScheme(event) {
+  event.preventDefault();
+  const payload = {
+    scheme_name: document.getElementById('scheme_name').value,
+    description: document.getElementById('scheme_desc').value,
+    state: document.getElementById('scheme_state').value,
+    district: document.getElementById('scheme_district').value,
+    eligible_crop: document.getElementById('scheme_crops').value,
+    farmer_category: document.getElementById('scheme_cats').value,
+    eligibility_criteria: "Registered farmer with landholding record",
+    benefit: document.getElementById('scheme_benefit').value,
+    official_url: document.getElementById('scheme_url').value,
+    deadline: "2026-12-31"
+  };
+
+  try {
+    const res = await fetch('/api/schemes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      alert("Scheme registered under 'PENDING_VERIFICATION'. Please verify and publish to enable farmer calls.");
+      window.location.reload();
+    } else {
+      alert("Error saving scheme");
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+}
+</script>
+{% endblock %}

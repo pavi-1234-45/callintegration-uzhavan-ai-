@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Weather Alerts - Uzhavan AI{% endblock %}
+{% block page_title %}Autonomous Weather Monitoring & Severe Event Engine{% endblock %}
+
+{% block content %}
+<!-- Live Weather Monitor Action Card -->
+<div class="card" style="margin-bottom: 28px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h3 style="font-size: 17px; font-weight: 700;">Live Meteorological Monitoring</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+        Queries real meteorological data (Open-Meteo & Uzhavan AI API) and runs deterministic alert thresholds.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button type="button" onclick="checkDistrictWeather('Madurai', 9.9252, 78.1198)" class="btn btn-secondary" style="font-size: 12.5px;">
+        📍 Check Madurai
+      </button>
+      <button type="button" onclick="checkDistrictWeather('Thanjavur', 10.7870, 79.1378)" class="btn btn-secondary" style="font-size: 12.5px;">
+        📍 Check Thanjavur
+      </button>
+      <button type="button" onclick="openCustomWeatherModal()" class="btn btn-primary" style="font-size: 12.5px;">
+        ⚡ Trigger Custom Location Check
+      </button>
+    </div>
+  </div>
+
+  <div id="weather-result-box" style="display: none; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 18px; margin-top: 14px;">
+    <!-- Filled dynamically -->
+  </div>
+</div>
+
+<!-- Active Weather Alerts -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div style="padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="font-size: 16px; font-weight: 600;">Recorded Weather Alerts</h3>
+    <span style="font-size: 12px; color: var(--text-muted);">Deterministic Threshold Evaluator</span>
+  </div>
+
+  <div class="table-container" style="border: none;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Alert ID</th>
+          <th>Event Identifier</th>
+          <th>District</th>
+          <th>Severity</th>
+          <th>Summary Advisory</th>
+          <th>Date Recorded</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if alerts %}
+          {% for a in alerts %}
+          <tr>
+            <td style="font-family: monospace; color: var(--emerald-400);">{{ a.alert_id }}</td>
+            <td style="font-family: monospace; font-size: 12px; color: var(--text-secondary);">{{ a.event_id }}</td>
+            <td style="font-weight: 600;">{{ a.district or 'Regional' }}</td>
+            <td>
+              <span class="badge {% if a.severity == 'CRITICAL' %}badge-danger{% elif a.severity == 'HIGH' %}badge-warning{% elif a.severity == 'MEDIUM' %}badge-info{% else %}badge-muted{% endif %}">
+                {{ a.severity }}
+              </span>
+            </td>
+            <td>{{ a.summary_text }}</td>
+            <td style="font-size: 12px; color: var(--text-muted);">
+              {{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '-' }}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              No weather alerts recorded yet. Click "Check Madurai" or trigger a custom check above.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Custom Weather Check Modal -->
+<div class="modal-overlay" id="customWeatherModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 style="font-size: 17px; font-weight: 700;">Trigger Weather Check & Matching</h3>
+      <button type="button" class="close-btn" onclick="closeModal('customWeatherModal')">&times;</button>
+    </div>
+    <form onsubmit="submitCustomWeather(event)">
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label class="form-label">District Name *</label>
+        <input type="text" id="custom-district" required value="Madurai" class="form-control">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+        <div class="form-group">
+          <label class="form-label">Latitude *</label>
+          <input type="number" step="0.0001" id="custom-lat" required value="9.9252" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude *</label>
+          <input type="number" step="0.0001" id="custom-lon" required value="78.1198" class="form-control">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('customWeatherModal')">Cancel</button>
+        <button type="submit" id="weatherCheckSubmitBtn" class="btn btn-primary">Run Meteorological Check</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openCustomWeatherModal() {
+  openModal('customWeatherModal');
+}
+
+async function checkDistrictWeather(district, lat, lon) {
+  const box = document.getElementById('weather-result-box');
+  box.style.display = 'block';
+  box.innerHTML = '<span style="color: #38bdf8;">⏳ Fetching real meteorological data from Open-Meteo & Uzhavan API for ' + district + '...</span>';
+
+  try {
+    const res = await fetch('/api/alerts/trigger-weather-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ district, latitude: lat, longitude: lon, state: 'Tamil Nadu' })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      const evalData = data.evaluation;
+      const w = data.weather_data;
+      box.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h4 style="font-size: 15px; font-weight: 700; color: #ffffff;">Real Weather Status for ${data.district}</h4>
+          <span class="badge ${evalData.severity === 'CRITICAL' ? 'badge-danger' : evalData.severity === 'HIGH' ? 'badge-warning' : 'badge-success'}">${evalData.severity}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size: 13px; margin-bottom: 12px;">
+          <div><span style="color:var(--text-muted)">Temperature:</span> <strong>${w.temperature}°C</strong></div>
+          <div><span style="color:var(--text-muted)">Rain Sum:</span> <strong>${w.rain_sum} mm</strong></div>
+          <div><span style="color:var(--text-muted)">Rain Prob:</span> <strong>${w.rain_probability}%</strong></div>
+          <div><span style="color:var(--text-muted)">Wind:</span> <strong>${w.wind_speed} km/h</strong></div>
+        </div>
+        <p style="font-size: 13.5px; color: #e2e8f0; margin-bottom: 10px;"><strong>Advisory:</strong> ${evalData.description}</p>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--emerald-400);">
+          <span>Event ID: <code>${evalData.event_id}</code></span>
+          <span>Matched & Queued Outbound Calls: <strong>${data.queued_call_jobs}</strong></span>
+        </div>
+      `;
+    } else {
+      box.innerHTML = `<span style="color: #ef4444;">Error: ${data.detail || 'Failed to check weather'}</span>`;
+    }
+  } catch (err) {
+    box.innerHTML = `<span style="color: #ef4444;">Network error: ${err.message}</span>`;
+  }
+}
+
+async function submitCustomWeather(event) {
+  event.preventDefault();
+  const district = document.getElementById('custom-district').value;
+  const lat = parseFloat(document.getElementById('custom-lat').value);
+  const lon = parseFloat(document.getElementById('custom-lon').value);
+  closeModal('customWeatherModal');
+  await checkDistrictWeather(district, lat, lon);
+}
+</script>
+{% endblock %}

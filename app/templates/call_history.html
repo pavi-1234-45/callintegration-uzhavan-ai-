@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Call History - Uzhavan AI{% endblock %}
+{% block page_title %}Farmer Call History & Carrier Webhook Logs{% endblock %}
+
+{% block content %}
+<!-- Filters Bar -->
+<div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+  <form method="GET" action="/call-history" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+    <div class="form-group" style="width: 170px;">
+      <label class="form-label">Call Status</label>
+      <select name="status" class="form-control form-select">
+        <option value="">All Statuses</option>
+        <option value="COMPLETED" {% if status == 'COMPLETED' %}selected{% endif %}>Completed (Answered)</option>
+        <option value="BUSY" {% if status == 'BUSY' %}selected{% endif %}>Busy</option>
+        <option value="NO_ANSWER" {% if status == 'NO_ANSWER' %}selected{% endif %}>No Answer</option>
+        <option value="FAILED" {% if status == 'FAILED' %}selected{% endif %}>Failed</option>
+      </select>
+    </div>
+    <div class="form-group" style="width: 160px;">
+      <label class="form-label">Alert Type</label>
+      <select name="call_type" class="form-control form-select">
+        <option value="">All Types</option>
+        <option value="WEATHER" {% if call_type == 'WEATHER' %}selected{% endif %}>Weather Alert</option>
+        <option value="MARKET" {% if call_type == 'MARKET' %}selected{% endif %}>Market Price</option>
+        <option value="SCHEME" {% if call_type == 'SCHEME' %}selected{% endif %}>Scheme Notice</option>
+        <option value="NEWS" {% if call_type == 'NEWS' %}selected{% endif %}>Advisory News</option>
+      </select>
+    </div>
+    <div class="form-group" style="width: 150px;">
+      <label class="form-label">Language</label>
+      <select name="language" class="form-control form-select">
+        <option value="">All</option>
+        <option value="ta-IN" {% if language == 'ta-IN' %}selected{% endif %}>Tamil</option>
+        <option value="en-IN" {% if language == 'en-IN' %}selected{% endif %}>English</option>
+        <option value="te-IN" {% if language == 'te-IN' %}selected{% endif %}>Telugu</option>
+        <option value="kn-IN" {% if language == 'kn-IN' %}selected{% endif %}>Kannada</option>
+        <option value="ml-IN" {% if language == 'ml-IN' %}selected{% endif %}>Malayalam</option>
+        <option value="hi-IN" {% if language == 'hi-IN' %}selected{% endif %}>Hindi</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-secondary">Filter Records</button>
+    {% if status or call_type or language %}
+    <a href="/call-history" class="btn btn-secondary">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- History Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div style="padding: 16px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="font-size: 15px; font-weight: 600;">Telephony Call Records ({{ calls|length }})</h3>
+    <span style="font-size: 12px; color: var(--text-muted);">Real Telephony Provider Webhook Logged</span>
+  </div>
+
+  <div class="table-container" style="border: none;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Call ID</th>
+          <th>Farmer Name</th>
+          <th>Masked Phone</th>
+          <th>Alert Type</th>
+          <th>Language</th>
+          <th>Carrier Status</th>
+          <th>Attempt</th>
+          <th>Duration</th>
+          <th>DTMF Response</th>
+          <th>Date & Time</th>
+          <th>Voice Audio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if calls %}
+          {% for c in calls %}
+          <tr>
+            <td style="font-family: monospace; font-size: 12px; color: var(--emerald-400);">{{ c.call_id }}</td>
+            <td style="font-weight: 600;">{{ c.farmer.name if c.farmer else 'Farmer' }}</td>
+            <td style="font-family: monospace;">{{ c.masked_phone }}</td>
+            <td>
+              <span class="badge {% if c.call_type == 'WEATHER' %}badge-info{% elif c.call_type == 'MARKET' %}badge-success{% else %}badge-purple{% endif %}">
+                {{ c.call_type }}
+              </span>
+            </td>
+            <td>{{ c.language }}</td>
+            <td>
+              <span class="badge {% if c.status == 'COMPLETED' %}badge-success{% elif c.status in ('BUSY','NO_ANSWER') %}badge-warning{% elif c.status == 'FAILED' %}badge-danger{% else %}badge-info{% endif %}">
+                {{ c.status }}
+              </span>
+            </td>
+            <td>Attempt {{ c.attempt_number }}</td>
+            <td>{{ c.duration }}s</td>
+            <td>
+              {% if c.opted_out %}
+                <span class="badge badge-danger">0: Opted Out</span>
+              {% elif c.dtmf_response == '1' %}
+                <span class="badge badge-purple">1: Replay</span>
+              {% elif c.dtmf_response == '2' %}
+                <span class="badge badge-info">2: More Info</span>
+              {% elif c.dtmf_response == '9' %}
+                <span class="badge badge-muted">9: Ended</span>
+              {% elif c.dtmf_response %}
+                <span class="badge badge-purple">Key {{ c.dtmf_response }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">
+              {{ c.created_at.strftime('%Y-%m-%d %H:%M:%S') if c.created_at else '-' }}
+            </td>
+            <td>
+              {% if c.audio_url %}
+              <button type="button" onclick="playAudioUrl('{{ c.audio_url }}', this)" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;">
+                ▶ Play Audio
+              </button>
+              {% else %}
+              <span style="font-size: 11px; color: var(--text-muted);">-</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="11" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              No call records found matching criteria.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

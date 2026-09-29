@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Uzhavan AI Voice Portal{% endblock %}
+{% block page_title %}Autonomous Farmer Voice Portal Dashboard{% endblock %}
+
+{% block content %}
+<!-- Quick Filter Bar -->
+<div class="card" style="margin-bottom: 24px; padding: 16px 20px;">
+  <form method="GET" action="/" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+    <div class="form-group" style="min-width: 180px;">
+      <label class="form-label">Filter District</label>
+      <input type="text" name="district" value="{{ district_filter or '' }}" placeholder="e.g. Madurai" class="form-control">
+    </div>
+    <div class="form-group" style="min-width: 180px;">
+      <label class="form-label">Filter Crop</label>
+      <input type="text" name="crop" value="{{ crop_filter or '' }}" placeholder="e.g. Tomato" class="form-control">
+    </div>
+    <div class="form-group" style="min-width: 180px;">
+      <label class="form-label">Language</label>
+      <select name="language" class="form-control form-select">
+        <option value="">All Languages</option>
+        <option value="ta-IN" {% if lang_filter == 'ta-IN' %}selected{% endif %}>Tamil (தமிழ்)</option>
+        <option value="en-IN" {% if lang_filter == 'en-IN' %}selected{% endif %}>English</option>
+        <option value="te-IN" {% if lang_filter == 'te-IN' %}selected{% endif %}>Telugu (తెలుగు)</option>
+        <option value="kn-IN" {% if lang_filter == 'kn-IN' %}selected{% endif %}>Kannada (ಕನ್ನಡ)</option>
+        <option value="ml-IN" {% if lang_filter == 'ml-IN' %}selected{% endif %}>Malayalam (മലയാളം)</option>
+        <option value="hi-IN" {% if lang_filter == 'hi-IN' %}selected{% endif %}>Hindi (हिन्दी)</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-secondary">Apply Filters</button>
+    {% if district_filter or crop_filter or lang_filter %}
+    <a href="/" class="btn btn-secondary">Reset</a>
+    {% endif %}
+    <div style="margin-left: auto; display: flex; align-items: center;">
+      <span class="badge badge-success" style="font-size: 11px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
+        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #34d399;"></span>
+        Firebase: uzhavan-ai-686d6 Synced
+      </span>
+    </div>
+  </form>
+</div>
+
+<!-- 8 Core Metrics Grid -->
+<div class="grid-metrics">
+  <div class="metric-card">
+    <div class="metric-header">
+      <span>Total Registered Farmers</span>
+      <span>👨‍🌾</span>
+    </div>
+    <div class="metric-value" id="stat-total_farmers">{{ stats.total_farmers }}</div>
+    <div class="metric-sub">Registered across districts</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span>Voice-Enabled Farmers</span>
+      <span>📞</span>
+    </div>
+    <div class="metric-value" id="stat-voice_enabled_farmers" style="color: var(--emerald-400)">{{ stats.voice_enabled_farmers }}</div>
+    <div class="metric-sub">With verified call consent</div>
+  </div>
+
+  <div class="metric-card alert-card">
+    <div class="metric-header">
+      <span>Today's Weather & Agri Alerts</span>
+      <span>⚡</span>
+    </div>
+    <div class="metric-value" id="stat-todays_alerts" style="color: #fbbf24">{{ stats.todays_alerts }}</div>
+    <div class="metric-sub">Triggered by autonomous monitors</div>
+  </div>
+
+  <div class="metric-card info-card">
+    <div class="metric-header">
+      <span>Queued Outbound Calls</span>
+      <span>⏳</span>
+    </div>
+    <div class="metric-value" id="stat-queued_calls" style="color: #60a5fa">{{ stats.queued_calls }}</div>
+    <div class="metric-sub">Awaiting telephony dispatch</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span>Completed Calls</span>
+      <span>✅</span>
+    </div>
+    <div class="metric-value" id="stat-completed_calls" style="color: #34d399">{{ stats.completed_calls }}</div>
+    <div class="metric-sub">Successfully delivered to farmers</div>
+  </div>
+
+  <div class="metric-card alert-card">
+    <div class="metric-header">
+      <span>No-Answer Calls</span>
+      <span>📵</span>
+    </div>
+    <div class="metric-value" id="stat-no_answer_calls" style="color: #fb923c">{{ stats.no_answer_calls }}</div>
+    <div class="metric-sub">Scheduled for automated retry</div>
+  </div>
+
+  <div class="metric-card danger-card">
+    <div class="metric-header">
+      <span>Failed Carrier Calls</span>
+      <span>❌</span>
+    </div>
+    <div class="metric-value" id="stat-failed_calls" style="color: #f87171">{{ stats.failed_calls }}</div>
+    <div class="metric-sub">Network / carrier drops</div>
+  </div>
+
+  <div class="metric-card info-card">
+    <div class="metric-header">
+      <span>Active Retries Pending</span>
+      <span>🔁</span>
+    </div>
+    <div class="metric-value" id="stat-active_retries" style="color: #a78bfa">{{ stats.active_retries }}</div>
+    <div class="metric-sub">30-min backoff cycle</div>
+  </div>
+</div>
+
+<!-- Recent Alerts & Live Call Feed -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <!-- Recent Alerts -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px; font-weight: 600;">Active Agricultural Alerts</h3>
+      <a href="/weather-alerts" style="font-size: 12.5px; color: var(--emerald-400); text-decoration: none;">View All →</a>
+    </div>
+
+    {% if stats.recent_alerts %}
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Title</th>
+            <th>Severity</th>
+            <th>District</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in stats.recent_alerts %}
+          <tr>
+            <td>
+              <span class="badge {% if a.type == 'WEATHER' %}badge-info{% elif a.type == 'MARKET' %}badge-success{% else %}badge-purple{% endif %}">
+                {{ a.type }}
+              </span>
+            </td>
+            <td style="font-weight: 500;">{{ a.title }}</td>
+            <td>
+              <span class="badge {% if a.severity == 'CRITICAL' %}badge-danger{% elif a.severity == 'HIGH' %}badge-warning{% else %}badge-muted{% endif %}">
+                {{ a.severity }}
+              </span>
+            </td>
+            <td>{{ a.district or 'All' }}</td>
+            <td style="color: var(--text-muted); font-size: 12px;">{{ a.time }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding: 30px; text-align: center; color: var(--text-muted); font-size: 13.5px;">
+      No alerts recorded yet today. Autonomous monitors are running.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Live Call Activity Feed -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px; font-weight: 600;">Recent Voice Calls Activity</h3>
+      <a href="/call-history" style="font-size: 12.5px; color: var(--emerald-400); text-decoration: none;">Full History →</a>
+    </div>
+
+    {% if stats.recent_calls %}
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Lang</th>
+            <th>Duration</th>
+            <th>DTMF</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in stats.recent_calls %}
+          <tr>
+            <td style="font-family: monospace;">{{ c.phone }}</td>
+            <td>
+              <span class="badge {% if c.status == 'COMPLETED' %}badge-success{% elif c.status in ('BUSY','NO_ANSWER') %}badge-warning{% elif c.status == 'FAILED' %}badge-danger{% else %}badge-info{% endif %}">
+                {{ c.status }}
+              </span>
+            </td>
+            <td>{{ c.language[:2]|upper }}</td>
+            <td>{{ c.duration }}s</td>
+            <td>
+              {% if c.dtmf %}
+                <span class="badge badge-purple">Key {{ c.dtmf }}</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td style="color: var(--text-muted); font-size: 12px;">{{ c.time }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding: 30px; text-align: center; color: var(--text-muted); font-size: 13.5px;">
+      No call activity yet. Register a farmer and trigger an alert to start outbound calls.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Poll stats every 5 seconds for live dashboard updates
+  setInterval(refreshDashboardStats, 5000);
+</script>
+{% endblock %}

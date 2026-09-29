@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Agricultural News - Uzhavan AI{% endblock %}
+{% block page_title %}Agricultural News & Official Department Notices{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h3 style="font-size: 16px; font-weight: 700;">Deterministic Rule-Filtered Agricultural News</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+        Sources: <strong>The Hindu, Times of India, PIB Agriculture</strong>. Articles are evaluated deterministically (Score ≥ 75 qualifies for voice calling). Unrelated national or entertainment news is completely filtered out.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <a href="/news" class="btn btn-secondary" style="font-size: 12.5px;">🔄 Refresh Feed</a>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;">
+  {% if news %}
+    {% for item in news %}
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span class="badge {% if item.tag == 'weather' %}badge-info{% elif item.tag == 'scheme' %}badge-success{% else %}badge-purple{% endif %}">
+            {{ item.tag|upper }}
+          </span>
+          <span class="badge {% if item.relevance_score >= 80 %}badge-success{% elif item.relevance_score >= 70 %}badge-warning{% else %}badge-muted{% endif %}">
+            Relevance: {{ item.relevance_score }}/100
+          </span>
+        </div>
+
+        <h4 style="font-size: 16px; font-weight: 700; color: #ffffff; line-height: 1.4; margin-bottom: 10px;">
+          {{ item.title }}
+        </h4>
+
+        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+          {{ item.summary }}
+        </p>
+      </div>
+
+      <div style="border-top: 1px solid var(--border-subtle); padding-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-muted);">
+          Source: {{ item.source|upper }} • {{ item.date }}
+        </span>
+
+        {% if item.eligible_for_voice %}
+        <button type="button" onclick="broadcastNews('{{ item.title|replace("'", "\\'") }}', '{{ item.summary|replace("'", "\\'") }}')" class="btn btn-primary" style="font-size: 11px; padding: 4px 10px;">
+          📢 Broadcast Voice Advisory
+        </button>
+        {% else %}
+        <span style="font-size: 11px; color: var(--text-muted);">Informational Only</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+      No high-relevance agricultural articles found at this moment.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function broadcastNews(title, summary) {
+  if (!confirm(`Broadcast this agricultural announcement to affected farmers?`)) return;
+
+  try {
+    const res = await fetch('/api/agricultural-news/broadcast-news', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ title, summary })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`✅ News advisory queued!\nAlert ID: ${data.alert_id}\nQueued Calls: ${data.queued_calls}`);
+      window.location.href = "/call-history";
+    } else {
+      alert("Error broadcasting news alert");
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+}
+</script>
+{% endblock %}

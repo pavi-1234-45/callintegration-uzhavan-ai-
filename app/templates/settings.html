@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Uzhavan AI{% endblock %}
+{% block page_title %}Autonomous Voice Communication System Configuration{% endblock %}
+
+{% block content %}
+<div style="max-width: 850px; margin: 0 auto;">
+  <div class="card" style="margin-bottom: 24px;">
+    <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 4px;">System Engine Parameters</h3>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;">
+      Configured via <code>.env</code> file. Changes to these parameters control autonomous monitoring cycles, concurrency, carrier routing, and emergency policies.
+    </p>
+
+    <!-- Telephony Settings -->
+    <div class="form-section">
+      <div class="section-title">
+        <span>📞</span>
+        <span>Telephony & Carrier Network</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Active Voice Provider</label>
+          <input type="text" readonly value="{{ settings.TELEPHONY_PROVIDER|upper }}" class="form-control" style="background: rgba(255,255,255,0.05);">
+          <span style="font-size: 11px; color: var(--text-muted);">Options: EXOTEL (India PSTN), TWILIO, SIMULATION</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Carrier Channel Concurrency Limit</label>
+          <input type="text" readonly value="{{ settings.TELEPHONY_CONCURRENCY_LIMIT }} Concurrent Calls" class="form-control" style="background: rgba(255,255,255,0.05);">
+          <span style="font-size: 11px; color: var(--text-muted);">Respects telephony carrier account rate limits</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Retry Policy -->
+    <div class="form-section">
+      <div class="section-title">
+        <span>🔁</span>
+        <span>Retry System Policy</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Maximum Retry Attempts</label>
+          <input type="text" readonly value="{{ settings.MAX_RETRIES }} Attempts" class="form-control" style="background: rgba(255,255,255,0.05);">
+          <span style="font-size: 11px; color: var(--text-muted);">Triggered on BUSY, NO_ANSWER, or TEMPORARY_FAILURE</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Retry Backoff Interval</label>
+          <input type="text" readonly value="{{ settings.RETRY_DELAY_MINUTES }} Minutes" class="form-control" style="background: rgba(255,255,255,0.05);">
+          <span style="font-size: 11px; color: var(--text-muted);">Time before dialing unreached farmer</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quiet Hours Policy -->
+    <div class="form-section">
+      <div class="section-title">
+        <span>🌙</span>
+        <span>Quiet Hours Policy</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Quiet Hours Window</label>
+          <input type="text" readonly value="{{ settings.QUIET_HOURS_START }}:00 to 0{{ settings.QUIET_HOURS_END }}:00 (9 PM - 6 AM)" class="form-control" style="background: rgba(255,255,255,0.05);">
+          <span style="font-size: 11px; color: var(--text-muted);">Normal calls suppressed during quiet hours</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emergency Critical Override</label>
+          <input type="text" readonly value="ENABLED (CRITICAL alerts dial 24/7)" class="form-control" style="background: rgba(255,255,255,0.05); color: var(--emerald-400);">
+          <span style="font-size: 11px; color: var(--text-muted);">Severe cyclones/storms bypass quiet hours</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase Mobile App Integration -->
+    <div class="form-section">
+      <div class="section-title" style="justify-content: space-between; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>📱</span>
+          <span>Uzhavan AI Mobile App - Firebase Backend Integration</span>
+        </div>
+        <button id="btn-sync-firebase" onclick="triggerFirebaseSync()" class="btn btn-primary" style="font-size: 12px; padding: 4px 12px;">
+          ⚡ Sync Farmers Now
+        </button>
+      </div>
+      <div id="sync-alert-banner" style="display: none; padding: 10px 14px; margin-bottom: 12px; border-radius: 6px; font-size: 12px;"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Firebase Project ID</label>
+          <input type="text" readonly value="{{ settings.FIREBASE_PROJECT_ID }}" class="form-control" style="background: rgba(255,255,255,0.05); color: var(--emerald-400); font-weight: 600;">
+          <span style="font-size: 11px; color: var(--text-muted);">Uzhavan AI Mobile App Firestore & Auth Database</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Backend Connection Status</label>
+          <input type="text" readonly value="CONNECTED (Active Real-time Sync)" class="form-control" style="background: rgba(255,255,255,0.05); color: var(--emerald-400);">
+          <span style="font-size: 11px; color: var(--text-muted);">Syncs app registrations into calling engine</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Background Sync Cadence</label>
+          <input type="text" readonly value="Every {{ settings.FIREBASE_SYNC_INTERVAL_MINUTES }} Minutes & Real-time Webhook" class="form-control" style="background: rgba(255,255,255,0.05);">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile App Auth Ingestion</label>
+          <input type="text" readonly value="ACTIVE (/api/v2/auth/register)" class="form-control" style="background: rgba(255,255,255,0.05); color: #60a5fa;">
+          <span style="font-size: 11px; color: var(--text-muted);">Catches app registrations with zero app changes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Autonomous Intervals -->
+    <div class="form-section">
+      <div class="section-title">
+        <span>🤖</span>
+        <span>Autonomous Monitoring Intervals</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Weather Forecast Check</label>
+          <input type="text" readonly value="Every {{ settings.WEATHER_CHECK_INTERVAL_MINUTES }} Minutes" class="form-control" style="background: rgba(255,255,255,0.05);">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Market Mandi Prices Check</label>
+          <input type="text" readonly value="Every {{ settings.MARKET_CHECK_INTERVAL_MINUTES }} Minutes" class="form-control" style="background: rgba(255,255,255,0.05);">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function triggerFirebaseSync() {
+  const btn = document.getElementById('btn-sync-firebase');
+  const banner = document.getElementById('sync-alert-banner');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing...';
+  banner.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/firebase/sync', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      banner.style.display = 'block';
+      banner.style.background = 'rgba(52, 211, 153, 0.15)';
+      banner.style.color = '#34d399';
+      banner.style.border = '1px solid rgba(52, 211, 153, 0.3)';
+      banner.textContent = `✅ Successfully synced ${data.total_synced} app farmers (${data.created} new, ${data.updated} updated). ${data.calls_queued} autonomous calls queued.`;
+      setTimeout(() => { location.reload(); }, 2000);
+    } else {
+      banner.style.display = 'block';
+      banner.style.background = 'rgba(239, 68, 68, 0.15)';
+      banner.style.color = '#f87171';
+      banner.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      banner.textContent = `❌ Sync failed: ${data.detail || data.error || 'Unknown error'}`;
+    }
+  } catch (err) {
+    banner.style.display = 'block';
+    banner.style.background = 'rgba(239, 68, 68, 0.15)';
+    banner.style.color = '#f87171';
+    banner.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+    banner.textContent = `❌ Network error triggering sync: ${err.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Sync Farmers Now';
+  }
+}
+</script>
+{% endblock %}

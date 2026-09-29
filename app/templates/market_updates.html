@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Market Updates - Uzhavan AI{% endblock %}
+{% block page_title %}Daily Mandi Market Prices (Agmarknet 2.0 & Govt of India){% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h3 style="font-size: 16px; font-weight: 700;">Real Daily Mandi Wholesale & Retail Rates</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+        Source: <strong>Agmarknet 2.0 (Ministry of Agriculture & Farmers Welfare)</strong>. Prices are strictly matched to the farmer's registered crop.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <a href="/market-updates" class="btn btn-secondary" style="font-size: 12.5px;">🔄 Refresh Prices</a>
+    </div>
+  </div>
+</div>
+
+<!-- Prices Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-container" style="border: none;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Commodity / Crop</th>
+          <th>Variety</th>
+          <th>Market / Mandi</th>
+          <th>Modal Price (Quintal)</th>
+          <th>Approx. Per KG</th>
+          <th>Trend</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if prices %}
+          {% for p in prices %}
+          <tr>
+            <td>
+              <span class="badge {% if p.category == 'vegetables' %}badge-success{% elif p.category == 'fruits' %}badge-warning{% else %}badge-info{% endif %}">
+                {{ p.category|capitalize }}
+              </span>
+            </td>
+            <td style="font-weight: 700; font-size: 14.5px;">{{ p.commodity }}</td>
+            <td style="color: var(--text-secondary);">{{ p.variety or 'Standard' }}</td>
+            <td>{{ p.market }}</td>
+            <td style="font-family: monospace; font-weight: 600;">₹{{ p.modal_price }} / {{ p.unit }}</td>
+            <td style="font-weight: 600; color: var(--emerald-400);">
+              ₹{{ (p.min_price / 100)|round(1) }} - ₹{{ (p.max_price / 100)|round(1) }}/kg
+            </td>
+            <td>
+              {% if p.trend == 'rising' %}
+                <span style="color: #34d399;">▲ Rising (+{{ p.percentage_change }}%)</span>
+              {% elif p.trend == 'falling' %}
+                <span style="color: #f87171;">▼ Falling ({{ p.percentage_change }}%)</span>
+              {% else %}
+                <span style="color: var(--text-muted);">● Stable</span>
+              {% endif %}
+            </td>
+            <td>
+              <button type="button" onclick="broadcastCropPrice('{{ p.commodity }}')" class="btn btn-primary" style="font-size: 11.5px; padding: 5px 12px;">
+                📞 Broadcast to {{ p.commodity }} Farmers
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              Market data is loading from Agmarknet...
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function broadcastCropPrice(crop) {
+  if (!confirm(`Broadcast daily mandi price advisory to all farmers registered for '${crop}'?`)) return;
+
+  try {
+    const res = await fetch(`/api/market-updates/broadcast-crop-price?crop=${encodeURIComponent(crop)}`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert(`✅ Market alert broadcast scheduled!\nCrop: ${data.crop}\nModal Price: ₹${data.modal_price}\nQueued Phone Calls: ${data.queued_calls}`);
+      window.location.href = "/call-history";
+    } else {
+      alert("Broadcast Error: " + (data.detail || "Failed to broadcast"));
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+}
+</script>
+{% endblock %}
