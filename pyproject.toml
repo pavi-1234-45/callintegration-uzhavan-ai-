@@ -1,0 +1,8 @@
+[project]
+name = "callintegration-uzhavan-ai"
+version = "1.0.0"
+description = "Uzhavan AI Autonomous Farmer Call Integration Platform"
+requires-python = ">=3.11"
+
+[tool.vercel]
+entrypoint = "main:app"
