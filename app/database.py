@@ -32,8 +32,17 @@ SyncSessionLocal = sessionmaker(
 
 Base = declarative_base()
 
+_db_initialized = False
+
+async def ensure_db_initialized():
+    global _db_initialized
+    if not _db_initialized:
+        await init_db()
+        _db_initialized = True
+
 async def get_db():
     """FastAPI dependency for database session"""
+    await ensure_db_initialized()
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -50,6 +59,7 @@ def get_sync_db():
 
 async def init_db():
     """Initializes tables on startup and applies backward-compatible column migrations"""
+    import app.models  # Ensure all models are registered on Base.metadata before create_all
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

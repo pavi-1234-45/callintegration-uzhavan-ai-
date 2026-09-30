@@ -41,11 +41,14 @@ async def scheduled_firebase_sync_job():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize Database tables
-    logger.info("🌱 Initializing Uzhavan AI Database tables...")
-    await init_db()
+    try:
+        logger.info("🌱 Initializing Uzhavan AI Database tables...")
+        await init_db()
+    except Exception as e:
+        logger.error(f"Database init warning: {e}")
 
     # Initial Sync: Fetch farmers already registered via Uzhavan AI Mobile App's Firebase backend
-    if getattr(settings, "FIREBASE_SYNC_ON_STARTUP", True):
+    if getattr(settings, "FIREBASE_SYNC_ON_STARTUP", True) and not os.getenv("VERCEL"):
         logger.info("📱 Syncing registered farmers from Uzhavan AI Mobile App's Firebase backend...")
         try:
             async with AsyncSessionLocal() as db:
@@ -111,6 +114,16 @@ templates = Jinja2Templates(directory=templates_dir)
 
 # Include API and Webhooks
 app.include_router(api_router)
+
+@app.get("/health")
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "app": settings.APP_NAME,
+        "is_vercel": getattr(settings, "IS_VERCEL", False),
+        "database": "sqlite-temporary" if getattr(settings, "IS_VERCEL", False) else "local-sqlite"
+    }
 
 # ------------------------------------------------------------------------------
 # 10 MAIN PORTAL WEB SECTIONS
