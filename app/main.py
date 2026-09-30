@@ -54,30 +54,33 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"Initial Firebase sync error: {e}")
 
-    # Start Autonomous Periodic Background Scheduler
-    logger.info("⏱️ Starting Autonomous Background Monitoring Scheduler...")
-    scheduler.add_job(
-        run_weather_monitoring_cycle,
-        "interval",
-        minutes=settings.WEATHER_CHECK_INTERVAL_MINUTES,
-        id="auto_weather_job",
-        replace_existing=True
-    )
-    scheduler.add_job(
-        run_market_monitoring_cycle,
-        "interval",
-        minutes=settings.MARKET_CHECK_INTERVAL_MINUTES,
-        id="auto_market_job",
-        replace_existing=True
-    )
-    scheduler.add_job(
-        scheduled_firebase_sync_job,
-        "interval",
-        minutes=settings.FIREBASE_SYNC_INTERVAL_MINUTES,
-        id="auto_firebase_sync_job",
-        replace_existing=True
-    )
-    scheduler.start()
+    # Start Autonomous Periodic Background Scheduler if not in serverless environment
+    if not os.getenv("VERCEL"):
+        logger.info("⏱️ Starting Autonomous Background Monitoring Scheduler...")
+        scheduler.add_job(
+            run_weather_monitoring_cycle,
+            "interval",
+            minutes=settings.WEATHER_CHECK_INTERVAL_MINUTES,
+            id="auto_weather_job",
+            replace_existing=True
+        )
+        scheduler.add_job(
+            run_market_monitoring_cycle,
+            "interval",
+            minutes=settings.MARKET_CHECK_INTERVAL_MINUTES,
+            id="auto_market_job",
+            replace_existing=True
+        )
+        scheduler.add_job(
+            scheduled_firebase_sync_job,
+            "interval",
+            minutes=settings.FIREBASE_SYNC_INTERVAL_MINUTES,
+            id="auto_firebase_sync_job",
+            replace_existing=True
+        )
+        scheduler.start()
+    else:
+        logger.info("⚡ Vercel Serverless environment detected: Disabling continuous interval background scheduler.")
 
     yield
 
@@ -93,9 +96,18 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Static and Templates
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
+# Static and Templates (resolved with absolute paths)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+static_dir = os.path.join(BASE_DIR, "static")
+templates_dir = os.path.join(BASE_DIR, "templates")
+
+if os.getenv("VERCEL"):
+    tmp_audio_dir = "/tmp/audio"
+    os.makedirs(tmp_audio_dir, exist_ok=True)
+    app.mount("/static/audio", StaticFiles(directory=tmp_audio_dir), name="tmp_static_audio")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+templates = Jinja2Templates(directory=templates_dir)
 
 # Include API and Webhooks
 app.include_router(api_router)

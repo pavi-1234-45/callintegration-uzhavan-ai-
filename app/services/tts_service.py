@@ -137,7 +137,15 @@ class TTSService:
         # Cache key based on text and language
         cache_hash = hashlib.md5(f"{tts_code}_{text}".encode("utf-8")).hexdigest()
         filename = f"tts_{cache_hash}.mp3"
-        filepath = os.path.join("app", "static", "audio", filename)
+
+        if getattr(settings, "IS_VERCEL", False) or os.getenv("VERCEL"):
+            audio_dir = "/tmp/audio"
+        else:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            audio_dir = os.path.join(base_dir, "static", "audio")
+
+        os.makedirs(audio_dir, exist_ok=True)
+        filepath = os.path.join(audio_dir, filename)
 
         if os.path.exists(filepath):
             return f"/static/audio/{filename}"

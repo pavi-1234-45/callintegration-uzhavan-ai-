@@ -16,9 +16,18 @@ class Settings:
     # Base Webhook URL
     BASE_WEBHOOK_URL: str = os.getenv("BASE_WEBHOOK_URL", "http://localhost:8000")
 
+    # Environment detection
+    IS_VERCEL: bool = bool(os.getenv("VERCEL"))
+
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./uzhavan_voice.db")
-    DATABASE_SYNC_URL: str = os.getenv("DATABASE_SYNC_URL", "sqlite:///./uzhavan_voice.db")
+    _DEFAULT_DB_FILE: str = "/tmp/uzhavan_voice.db" if bool(os.getenv("VERCEL")) else "./uzhavan_voice.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{_DEFAULT_DB_FILE}")
+    if IS_VERCEL and ("./uzhavan_voice.db" in DATABASE_URL or "sqlite+aiosqlite:///uzhavan_voice.db" in DATABASE_URL):
+        DATABASE_URL = "sqlite+aiosqlite:////tmp/uzhavan_voice.db"
+
+    DATABASE_SYNC_URL: str = os.getenv("DATABASE_SYNC_URL", f"sqlite:///{_DEFAULT_DB_FILE}")
+    if IS_VERCEL and ("./uzhavan_voice.db" in DATABASE_SYNC_URL or "sqlite:///uzhavan_voice.db" in DATABASE_SYNC_URL):
+        DATABASE_SYNC_URL = "sqlite:////tmp/uzhavan_voice.db"
 
     # Live Uzhavan AI API Integration
     UZHAVAN_LIVE_API_BASE: str = os.getenv("UZHAVAN_LIVE_API_BASE", "https://uzhavan-ai.duckdns.org").rstrip("/")
